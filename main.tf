@@ -129,7 +129,33 @@ resource "aws_network_interface" "web-server-networkInterface" {
 
 resource "aws_eip" "one" {
   domain                    = "vpc"
-  network_interface         = aws_network_interface.multi-ip.id
-  associate_with_private_ip = "10.0.0.10"
+  network_interface         = aws_network_interface.web-server-networkInterface.id
+  associate_with_private_ip = "10.0.1.50"
+  depends_on = [ aws_internet_gateway.gw ] # elastic ip need to have Internet Gateway initialized first
 }
+
 # 9. Create Ubuntu server and install/enable Apache2
+
+resource "aws_instance" "web-server-instance" {
+  ami = "ami-05d47d29a4c2d19e1"
+  instance_type =  "t4g.small"
+  availability_zone = "us-east-1a"
+  key_name = "main-key"
+
+  network_interface {
+    device_index = 0
+    network_interface_id = aws_network_interface.web-server-networkInterface.id
+
+  }
+# Here we are installing apache on the web sever when it launches
+   user_data = <<-EOF
+               #!/bin/bash
+               sudo apt update -y
+               sudo apt install apache2 -y
+               sudo bash -c 'echo your very first web server > /var/www/html/index.html'
+                  EOF
+
+  tags = {
+    Name = "web-server"
+  }
+  }
